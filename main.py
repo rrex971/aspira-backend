@@ -121,6 +121,108 @@ async def read_users_me(token: str = Depends(oauth2_scheme)):
     return {"username": username}
 
 
+# main endpoints
+
+@app.get("/getAdmissions")
+async def getAdmissions():
+    cur.execute("SELECT * FROM Student")
+    return cur.fetchall()
+
+@app.get("/getFaculty")
+async def getFaculty():
+    cur.execute("SELECT * FROM Faculty")
+    return cur.fetchall()
+
+@app.get("/getProfile")
+async def getProfile(regNo):
+    cur.execute(f"SELECT * FROM Student WHERE regNo = \'{regNo}\'")
+    return cur.fetchall()[0] if cur.rowcount > 0 else None
+
+@app.get("/getAcademicHistory")
+async def getAcademicHistory(regNo):
+    cur.execute(f'''SELECT
+        C.cID,
+        C.cName,
+        E.examID,
+        E.examName,
+        SM.scored,
+        E.total,
+        E.weightage
+    FROM 
+        Student S
+    JOIN 
+        Student_Marks SM ON S.regNo = SM.regNo
+    JOIN 
+        Course C ON SM.cID = C.cID
+    JOIN 
+        Exam E ON SM.examID = E.examID
+    WHERE 
+    S.regNo = '{regNo}';
+    ''')
+    return cur.fetchall() if cur.rowcount > 0 else None
+
+# student endpoints
+
+@app.get("/getAttendance")
+async def getAttendance(regNo, cID):
+    cur.execute(f'''SELECT                                       
+    C.cID,
+    C.cName,
+    SA.date,
+    SA.attended
+FROM 
+    Student S
+JOIN 
+    Student_Attendance SA ON S.regNo = SA.regNo
+JOIN 
+    Course C ON SA.cID = C.cID
+WHERE 
+    S.regNo = '{regNo}'
+    AND SA.cID = '{cID}';''')
+
+    return cur.fetchall() if cur.rowcount > 0 else None
+
+@app.get("/getGrades")
+async def getGrades(regNo, cID):
+    cur.execute(f'''SELECT
+        C.cID,
+        C.cName,
+        E.examID,
+        E.examName,
+        SM.scored,
+        E.total,
+        E.weightage
+    FROM 
+        Student S
+    JOIN 
+        Student_Marks SM ON S.regNo = SM.regNo
+    JOIN 
+        Course C ON SM.cID = C.cID
+    JOIN 
+        Exam E ON SM.examID = E.examID
+    WHERE 
+    S.regNo = '{regNo}'
+    AND SM.cID = '{cID}';''')
+    return cur.fetchall() if cur.rowcount > 0 else None
+
+# faculty endpoints
+@app.get("/getCourseStudents")
+async def getCourseStudents(cID):
+    cur.execute(f"SELECT S.regNo, S.sName FROM Student S JOIN Student_Course SC on S.regNo = SC.regNo WHERE cID = \'{cID}\' ORDER BY regNo ASC")
+    return cur.fetchall() if cur.rowcount > 0 else None
+
+@app.post("/logAttendance")
+async def logAttendance(data: dict):
+    for i in data["attendance"]:
+        cur.execute(f"INSERT INTO Student_Attendance (regNo, cID, date, attended) VALUES (\'{i['regNo']}\', \'{i['cID']}\', \'{i['date']}\', \'{i['attended']}')")
+        conn.commit()
+    return JSONResponse(status_code=201, content={"detail": "Attendance logged successfully"})
+
+@app.post("/uploadFile")
+async def uploadFile(file: UploadFile = Form(...)):
+    with open(file.filename, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return JSONResponse(status_code=201, content={"detail": "File uploaded successfully"})  
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=3123)

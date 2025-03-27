@@ -36,8 +36,13 @@ CREATE TABLE IF NOT EXISTS Student (
 CREATE TABLE IF NOT EXISTS Student_Attendance (
     regNo VARCHAR REFERENCES Student(regNo),
     cID INT REFERENCES Course(cID),
-    attended INT,
-    total INT,
+    date DATE,
+    attended BOOLEAN
+);
+
+CREATE TABLE IF NOT EXISTS Student_Course (
+    regNo VARCHAR REFERENCES Student(regNo),
+    cID INT REFERENCES Course(cID),
     PRIMARY KEY (regNo, cID)
 );
 
